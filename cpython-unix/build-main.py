@@ -196,13 +196,21 @@ def main():
     build_basename = "-".join(archive_components) + ".tar"
     dist_basename = "-".join(archive_components + [release_tag])
 
-    # We run make with static parallelism no greater than the machine's CPU count
-    # because we can get some speedup from parallel operations. But we also don't
-    # share a make job server with each build. So if we didn't limit the
-    # parallelism we could easily oversaturate the CPU. Higher levels of
+    # We run make with static parallelism no greater than the machine's CPU
+    # count because we can get some speedup from parallel operations. But we
+    # also don't share a make job server with each build. So if we didn't limit
+    # the parallelism we could easily oversaturate the CPU. Higher levels of
     # parallelism don't result in meaningful build speedups because tk has
     # a long, serial dependency chain that can't be built in parallel.
-    parallelism = min(1 if args.serial else 4, multiprocessing.cpu_count())
+    override = os.environ.get("PYBUILD_TOP_LEVEL_MAKE_JOBS") or os.environ.get(
+        "NUM_CPUS"
+    )
+    if override:
+        parallelism = max(1, int(override))
+    else:
+        parallelism = min(1 if args.serial else 4, multiprocessing.cpu_count())
+
+    print("top-level make parallelism: %d" % parallelism)
 
     subprocess.run(
         ["make", "-j%d" % parallelism, args.make_target], env=env, check=True

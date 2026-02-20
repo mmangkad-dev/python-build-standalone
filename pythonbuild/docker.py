@@ -93,8 +93,17 @@ def get_image(
             return image_id
 
         else:
+            # Rebuild from Dockerfile if tar doesn't exist
+            dockerfile_path = image_dir / f"{name}.Dockerfile"
+            if not dockerfile_path.exists():
+                raise FileNotFoundError(
+                    f"Docker image {image_id!r} not found, tar {tar_path} not found, "
+                    f"and Dockerfile {dockerfile_path} not found"
+                ) from None
+            with dockerfile_path.open("rb") as fh:
+                image_data = fh.read()
             return build_docker_image(
-                client, str(source_dir).encode(), image_dir, name, host_platform
+                client, image_data, image_dir, name, host_platform
             )
 
 

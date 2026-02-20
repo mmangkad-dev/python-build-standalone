@@ -61,7 +61,7 @@ fn main_impl() -> Result<()> {
                 Arg::new("organization")
                     .long("org")
                     .action(ArgAction::Set)
-                    .default_value("astral-sh")
+                    .default_value("mmangkad")
                     .help("GitHub organization"),
             )
             .arg(
@@ -151,7 +151,7 @@ fn main_impl() -> Result<()> {
                 Arg::new("organization")
                     .long("org")
                     .action(ArgAction::Set)
-                    .default_value("astral-sh")
+                    .default_value("mmangkad")
                     .help("GitHub organization"),
             )
             .arg(
@@ -237,6 +237,11 @@ fn main_impl() -> Result<()> {
 }
 
 fn main() {
+    // Install the rustls crypto provider to enable TLS operations.
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {
