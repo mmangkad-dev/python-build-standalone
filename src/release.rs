@@ -673,7 +673,8 @@ pub async fn bootstrap_llvm() -> Result<PathBuf> {
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
         Err(err) => return Err(err).context("failed to remove existing llvm directory"),
     }
-    tokio::fs::rename(temp_dir.into_path(), &llvm_dir).await?;
+    let temp_path = temp_dir.keep();
+    tokio::fs::rename(temp_path, &llvm_dir).await?;
 
     Ok(llvm_dir.join("llvm"))
 }

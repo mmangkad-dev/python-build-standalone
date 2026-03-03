@@ -237,6 +237,12 @@ def find_vswhere():
 
 
 def find_vs_path(path, msvc_version):
+    # Try using environment variable first if set by ilammy/msvc-dev-cmd
+    if "VSINSTALLDIR" in os.environ:
+        p = pathlib.Path(os.environ["VSINSTALLDIR"]) / path
+        if p.exists():
+            return p
+
     vswhere = find_vswhere()
 
     if msvc_version == "2019":
@@ -252,13 +258,13 @@ def find_vs_path(path, msvc_version):
         [
             str(vswhere),
             "-utf8",
-            # Visual Studio 2019.
             "-version",
             version,
             "-property",
             "installationPath",
             "-products",
             "*",
+            "-prerelease",
         ]
     )
 
@@ -313,10 +319,10 @@ def static_replace_in_file(p: pathlib.Path, search, replace):
 
 OPENSSL_PROPS_REMOVE_RULES_LEGACY = b"""
   <ItemGroup>
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).pdb" />
+    <_SSLDLL Include="$(opensslOutDir)\\libcrypto$(_DLLSuffix).dll" />
+    <_SSLDLL Include="$(opensslOutDir)\\libcrypto$(_DLLSuffix).pdb" />
+    <_SSLDLL Include="$(opensslOutDir)\\libssl$(_DLLSuffix).dll" />
+    <_SSLDLL Include="$(opensslOutDir)\\libssl$(_DLLSuffix).pdb" />
   </ItemGroup>
   <Target Name="_CopySSLDLL" Inputs="@(_SSLDLL)" Outputs="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')" AfterTargets="Build">
     <Copy SourceFiles="@(_SSLDLL)" DestinationFolder="$(OutDir)" />
@@ -328,10 +334,10 @@ OPENSSL_PROPS_REMOVE_RULES_LEGACY = b"""
 
 OPENSSL_PROPS_REMOVE_RULES = b"""
   <ItemGroup>
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).pdb" />
+    <_SSLDLL Include="$(opensslOutDir)\\libcrypto$(_DLLSuffix).dll" />
+    <_SSLDLL Include="$(opensslOutDir)\\libcrypto$(_DLLSuffix).pdb" />
+    <_SSLDLL Include="$(opensslOutDir)\\libssl$(_DLLSuffix).dll" />
+    <_SSLDLL Include="$(opensslOutDir)\\libssl$(_DLLSuffix).pdb" />
   </ItemGroup>
   <Target Name="_CopySSLDLL"
           Inputs="@(_SSLDLL)"
@@ -726,6 +732,7 @@ def run_msbuild(
     python_version: str,
     windows_sdk_version: str,
     freethreaded: bool,
+    msvc_version: str,
 ):
     args = [
         str(msbuild),
@@ -751,9 +758,19 @@ def run_msbuild(
     if freethreaded:
         args.append("/property:DisableGil=true")
 
+    # Map MSVC version to PlatformToolset
+    # This ensures we use the correct toolset even when building older Python
+    # versions that expect older toolsets (e.g., Python 3.10 expects v140)
+    toolset_map = {
+        "2019": "v142",
+        "2022": "v143",
+        "2026": "v145",
+    }
+    if msvc_version in toolset_map:
+        args.append(f"/property:PlatformToolset={toolset_map[msvc_version]}")
+
     # Build tail-calling Python for 3.15+
     if python_version.startswith("3.15") and platform == "x64":
-        args.append("/property:PlatformToolset=v145")
         args.append("/property:UseTailCallInterp=true")
 
     exec_and_log(args, str(pcbuild_path), os.environ)
@@ -1509,6 +1526,7 @@ def build_cpython(
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
                 freethreaded=freethreaded,
+                msvc_version=msvc_version,
             )
 
             # build-windows.py sets some environment variables which cause the
@@ -1576,6 +1594,7 @@ def build_cpython(
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
                 freethreaded=freethreaded,
+                msvc_version=msvc_version,
             )
             artifact_config = "PGUpdate"
 
@@ -1588,6 +1607,7 @@ def build_cpython(
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
                 freethreaded=freethreaded,
+                msvc_version=msvc_version,
             )
             artifact_config = "Release"
 

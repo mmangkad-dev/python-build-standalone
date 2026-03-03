@@ -576,6 +576,14 @@ fi
 # Define the base PGO profiling task, which we'll extend below with ignores
 export PROFILE_TASK='-m test --pgo'
 
+# Allow parallelism in PGO training tests.
+# Explicit override takes priority; otherwise inherit NUM_CPUS when available.
+if [[ -n "${PYBUILD_PGO_TEST_JOBS:-}" ]]; then
+    PROFILE_TASK="${PROFILE_TASK} -j ${PYBUILD_PGO_TEST_JOBS}"
+elif [[ -n "${NUM_CPUS:-}" ]]; then
+    PROFILE_TASK="${PROFILE_TASK} -j ${NUM_CPUS}"
+fi
+
 # On 3.14+ `test_strftime_y2k` fails when cross-compiling for `x86_64_v2` and `x86_64_v3` targets on
 # Linux, so we ignore it. See https://github.com/python/cpython/issues/128104
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then

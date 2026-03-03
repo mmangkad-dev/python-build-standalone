@@ -16,6 +16,7 @@ permissions: {}
 
 jobs:
   crate-build:
+    if: ${{ needs.generate-matrix.outputs.any_builds == 'true' }}
     needs:
       - generate-matrix
     runs-on: ${{ matrix.runner }}
@@ -24,7 +25,7 @@ jobs:
       fail-fast: false
     name: crate / ${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -32,7 +33,7 @@ jobs:
         run: |
           rustc --version > .rustc-version
 
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: |
             C:/Rust/.cargo/registry
@@ -45,7 +46,7 @@ jobs:
           cargo build --release
 
       - name: Upload executable
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ matrix.crate_artifact_name }}
           path: target/release/pythonbuild.exe
@@ -58,13 +59,13 @@ jobs:
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v7.1.4
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
         with:
           enable-cache: false
 
@@ -112,6 +113,7 @@ jobs:
           STEPS_GET_LABELS_OUTPUTS_LABELS: ${{ steps.get-labels.outputs.labels }}
 
   build:
+    if: ${{ needs.generate-matrix.outputs.any_builds == 'true' }}
     timeout-minutes: 90
     needs:
       - generate-matrix
@@ -126,23 +128,24 @@ jobs:
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Install Cygwin Environment
-        uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
+        uses: cygwin/cygwin-install-action@711d29f3da23c9f4a1798e369a6f01198c13b11a # v6.1
         with:
           packages: autoconf automake libtool
+          site: https://mirrors.sonic.net/cygwin/
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v7.1.4
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
         with:
           enable-cache: false
 
       - name: Download pythonbuild Executable
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: ${{ matrix.crate_artifact_name }}
 
@@ -152,30 +155,43 @@ jobs:
         run: |
           uv run build.py --help
 
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+          # Omit 'toolset' to use the runner's default (VS 2026 with 14.50/14.5x)
+          # build.py handles PlatformToolset override for MSBuild separately
+
+      - name: Fix Cygwin PATH conflict
+        shell: powershell
+        run: |
+          # Remove GNU link.exe to prevent conflict with MSVC linker
+          Get-Command link.exe -All | Where-Object { $_.Source -like "*cygwin*" } | ForEach-Object { 
+            Write-Host "Removing conflicting GNU link at: $($_.Source)"
+            Remove-Item $_.Source -Force 
+          }
+          # Verify the correct link.exe is prioritized
+          where.exe link
+
       - name: Build
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
-          IF "%MATRIX_VS_VERSION%"=="2026" (
-            call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
-          ) ELSE (
-            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
-          )
           uv run build.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
         env:
-          MATRIX_VCVARS: ${{ matrix.vcvars }}
           MATRIX_PYTHON: ${{ matrix.python }}
           MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
           MATRIX_VS_VERSION: ${{ matrix.vs_version }}
+          Platform: x64
 
       - name: Generate attestations
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         if: ${{ github.ref == 'refs/heads/main' }}
         with:
           subject-path: dist/*
 
       - name: Upload Distributions
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: cpython-${{ matrix.python }}-${{ matrix.vcvars }}-${{ matrix.build_options }}
           path: dist/*

@@ -27,12 +27,12 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: "Install uv"
-        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
 
       - name: "Download SHA256SUMS"
         env:
@@ -58,18 +58,18 @@ jobs:
 
       - name: "Clone versions repo"
         if: inputs.dry-run != true
-        run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
+        run: git clone https://${{ secrets.VERSIONS_PAT }}@github.com/mmangkad/versions.git mmangkad-versions
 
       - name: "Update versions"
         if: inputs.dry-run != true
-        run: cat dist/versions.ndjson | uv run astral-versions/scripts/insert-versions.py --name python-build-standalone
+        run: cat dist/versions.ndjson | uv run mmangkad-versions/scripts/insert-versions.py --name python-build-standalone
 
       - name: "Commit versions"
         if: inputs.dry-run != true
-        working-directory: astral-versions
+        working-directory: mmangkad-versions
         run: |
-          git config user.name "astral-versions-bot"
-          git config user.email "176161322+astral-versions-bot@users.noreply.github.com"
+          git config user.name "versions-bot"
+          git config user.email "176161322+versions-bot@users.noreply.github.com"
 
           git checkout -b "$BRANCH_NAME"
           git add -A
@@ -77,7 +77,7 @@ jobs:
 
       - name: "Create Pull Request"
         if: inputs.dry-run != true
-        working-directory: astral-versions
+        working-directory: mmangkad-versions
         env:
           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
         run: |
@@ -95,7 +95,7 @@ jobs:
 
       - name: "Merge Pull Request"
         if: inputs.dry-run != true
-        working-directory: astral-versions
+        working-directory: mmangkad-versions
         env:
           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
         run: |
