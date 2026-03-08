@@ -434,14 +434,26 @@ pub fn build_wanted_filenames(
                 );
             }
 
+            let io_suffix = release.install_only_suffix(Some(&python_version));
+            let io_prefix = if io_suffix.contains("freethreaded") {
+                "freethreaded-install_only"
+            } else {
+                "install_only"
+            };
+            let io_prefix_stripped = if io_suffix.contains("freethreaded") {
+                "freethreaded-install_only_stripped"
+            } else {
+                "install_only_stripped"
+            };
+
             wanted_filenames.insert(
-                format!("cpython-{version}-{triple}-install_only-{datetime}.tar.gz"),
-                format!("cpython-{version}+{tag}-{triple}-install_only.tar.gz"),
+                format!("cpython-{version}-{triple}-{io_prefix}-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-{io_prefix}.tar.gz"),
             );
 
             wanted_filenames.insert(
-                format!("cpython-{version}-{triple}-install_only_stripped-{datetime}.tar.gz"),
-                format!("cpython-{version}+{tag}-{triple}-install_only_stripped.tar.gz"),
+                format!("cpython-{version}-{triple}-{io_prefix_stripped}-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-{io_prefix_stripped}.tar.gz"),
             );
         }
     }
