@@ -4,9 +4,9 @@ attrs==25.4.0
     # via
     #   jsonschema
     #   referencing
-certifi==2026.1.4
+certifi==2026.2.25
     # via requests
-charset-normalizer==3.4.4
+charset-normalizer==3.4.5
     # via requests
 docker==7.1.0
     # via -r requirements.in
