@@ -44,3 +44,8 @@ windows-11-arm:
   arch: aarch64
   platform: windows
   free: false
+
+ubicloud-standard-2:
+  arch: x86_64
+  platform: linux
+  free: true

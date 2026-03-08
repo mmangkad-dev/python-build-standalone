@@ -274,7 +274,7 @@ def add_python_build_entries_for_config(
     python_versions = config["python_versions"]
     build_options = config["build_options"]
     arch = config["arch"]
-    runner = find_runner(runners, platform, arch, True)
+    runner = config.get("runner") or find_runner(runners, platform, arch, True)
 
     # Create base entry that will be used for all variants
     base_entry = {
