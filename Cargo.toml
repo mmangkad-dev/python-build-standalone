@@ -7,6 +7,8 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.101"
 apple-sdk = "0.6.0"
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1"
 bytes = "1.11.1"
 clap = "4.5.58"
 duct = "1.1.1"
