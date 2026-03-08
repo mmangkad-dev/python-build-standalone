@@ -28,7 +28,7 @@ cat-python-json archive:
 # Download release artifacts from GitHub Actions
 release-download-distributions token commit:
   mkdir -p dist
-  cargo run --release -- fetch-release-distributions --token {{token}} --commit {{commit}} --dest dist --org mmangkad
+  cargo run --release -- fetch-release-distributions --token {{token}} --commit {{commit}} --dest dist --org mmangkad-dev
 
 # Upload release artifacts to a GitHub release.
 release-upload-distributions token datetime tag:
@@ -51,8 +51,8 @@ release-set-latest-release tag:
   {
     "version": 1,
     "tag": "{{tag}}",
-    "release_url": "https://github.com/mmangkad/python-build-standalone/releases/tag/{{tag}}",
-    "asset_url_prefix": "https://github.com/mmangkad/python-build-standalone/releases/download/{{tag}}"
+    "release_url": "https://github.com/mmangkad-dev/python-build-standalone/releases/tag/{{tag}}",
+    "asset_url_prefix": "https://github.com/mmangkad-dev/python-build-standalone/releases/download/{{tag}}"
   }
   EOF
 
