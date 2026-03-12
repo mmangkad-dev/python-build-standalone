@@ -139,12 +139,6 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
   patch -p1 -i "${ROOT}/patch-makesetup-deduplicate-objs.patch"
 fi
 
-# testembed links against Tcl/Tk and libpython which already includes Tcl/Tk leading duplicate
-# symbols and warnings from objc (which then causes failures in `test_embed` during PGO).
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
-  patch -p1 -i "${ROOT}/patch-make-testembed-nolink-tcltk.patch"
-fi
-
 # The default build rule for the macOS dylib doesn't pick up libraries
 # from modules / makesetup. So patch it accordingly.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
@@ -158,10 +152,12 @@ fi
 # executable. This behavior is kinda suspect on all platforms, as it could be adding
 # library dependencies that shouldn't need to be there.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
-    if [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
-        patch -p1 -i "${ROOT}/patch-python-link-modules-3.10.patch"
-    else
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+        patch -p1 -i "${ROOT}/patch-python-link-modules-3.15.patch"
+    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
         patch -p1 -i "${ROOT}/patch-python-link-modules-3.11.patch"
+    elif [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
+        patch -p1 -i "${ROOT}/patch-python-link-modules-3.10.patch"
     fi
 fi
 
@@ -664,6 +660,25 @@ if [ -n "${CROSS_COMPILING}" ]; then
     fi
 
     # TODO: There are probably more of these, see #599.
+fi
+
+# Apply weak sem_clockwait patch for runtime detection on old glibc.
+# When building against glibc headers older than 2.30, configure cannot detect
+# sem_clockwait, causing threading.Event.wait() to use CLOCK_REALTIME instead of
+# CLOCK_MONOTONIC. This makes waits hang when the system clock jumps backward.
+# The patch declares sem_clockwait as a weak symbol and checks at runtime.
+if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.15.patch
+    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.13.patch
+    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.12.patch
+    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.11.patch
+    else
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.10.patch
+    fi
 fi
 
 # Adjust the Python startup logic (getpath.py) to properly locate the installation, even when
