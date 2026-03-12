@@ -229,7 +229,7 @@ linux:
     arch: x86_64
     arch_variant: v4
     libc: gnu
-    runner: ubicloud-standard-2
+    runner: blacksmith-2vcpu-ubuntu-2404
     python_versions:
       - "3.10"
       - "3.11"
