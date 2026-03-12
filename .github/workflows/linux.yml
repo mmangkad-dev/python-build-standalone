@@ -29,9 +29,17 @@ jobs:
           sudo apt update
           sudo apt install -y --no-install-recommends libssl-dev pkg-config
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
+
+      - name: Update Rust toolchain
+        run: |
+          rustup self update
+          rustup update stable
+          rustup default stable
+          rustc --version
+          cargo --version
 
       - name: Emit rustc version
         run: |
@@ -67,7 +75,7 @@ jobs:
     permissions:
       packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
 
@@ -76,8 +84,8 @@ jobs:
         with:
           enable-cache: false
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Set up Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
@@ -96,7 +104,7 @@ jobs:
 
       - name: Build Image
         id: build-image
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        uses: useblacksmith/build-push-action@v2
         env:
           SOURCE_DATE_EPOCH: 0
           DOCKER_BUILD_SUMMARY: false
@@ -105,16 +113,6 @@ jobs:
           context: .
           file: build/${{ matrix.name }}.Dockerfile
           labels: org.opencontainers.image.source=https://github.com/${{ env.REPO_NAME }}
-          # Cache from/to the current branch of the current repo as the primary cache key.
-          # Cache from the default branch of the current repo so branches can have cache hits.
-          # Cache from the default branch of the canonical repo so forks can have cache hits.
-          # Ignore errors on cache writes so CI of forks works without a valid GHCR config.
-          cache-from: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-linux_${{ matrix.arch }}-${{ env.GIT_REF_NAME }}
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-linux_${{ matrix.arch }}-main
-            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.name }}-linux_${{ matrix.arch }}-main
-          cache-to: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-linux_${{ matrix.arch }}-${{ env.GIT_REF_NAME }},ignore-error=true
           outputs: |
             type=docker,dest=build/image-${{ matrix.name }}.linux_${{ matrix.arch }}.tar
 
@@ -137,14 +135,14 @@ jobs:
 
   generate-matrix:
     name: Generate build matrix
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       python-build-matrix-0: ${{ steps.set-matrix.outputs.python-build-matrix-0 }}
       docker-build-matrix: ${{ steps.set-matrix.outputs.docker-build-matrix }}
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: useblacksmith/checkout@v1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -217,7 +215,7 @@ jobs:
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps: &build_steps
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: useblacksmith/checkout@v1
         with:
           fetch-depth: 0
           persist-credentials: false

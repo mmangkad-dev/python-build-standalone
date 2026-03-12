@@ -23,11 +23,11 @@ permissions: {}
 
 jobs:
   publish-versions:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     env:
       TAG: ${{ inputs.tag }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
 

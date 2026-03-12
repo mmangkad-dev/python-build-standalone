@@ -115,7 +115,11 @@ def generate_docker_matrix_entries(
     matrix_entries = []
     for image in DOCKER_BUILD_IMAGES:
         # Find appropriate runner for Linux platform with the specified architecture
-        runner = find_runner(runners, "linux", image["arch"], True)
+        # runner = find_runner(runners, "linux", image["arch"], True)
+        if image["arch"] == "x86_64":
+            runner = "blacksmith-2vcpu-ubuntu-2404"
+        elif image["arch"] == "aarch64":
+            runner = "blacksmith-2vcpu-ubuntu-2404-arm"
 
         entry = {
             "name": image["name"],
@@ -157,25 +161,34 @@ def generate_crate_build_matrix_entries(
                 needed_builds.add((platform, arch))
 
     # Create matrix entries for each needed build
-    return [
-        {
-            "platform": platform,
-            "arch": arch,
-            # Use the GitHub runner for Windows, because the Depot one is
-            # missing a Rust toolchain. On Linux, it's important that the the
-            # `python-build` runner matches the `crate-build` runner because of
-            # GLIBC version mismatches.
-            "runner": find_runner(
-                runners, platform, arch, True if platform == "windows" else True
-            ),
-            "crate_artifact_name": crate_artifact_name(
-                platform,
-                arch,
-            ),
-        }
-        for platform, arch in needed_builds
-        if not platform_filter or platform == platform_filter
-    ]
+    entries = []
+    for platform, arch in needed_builds:
+        if platform_filter and platform != platform_filter:
+            continue
+
+        # Use the GitHub runner for Windows, because the Depot one is
+        # missing a Rust toolchain. On Linux, it's important that the the
+        # `python-build` runner matches the `crate-build` runner because of
+        # GLIBC version mismatches.
+        # runner = find_runner(
+        #     runners, platform, arch, True if platform == "windows" else True
+        # )
+        if platform == "linux" and arch == "x86_64":
+            runner = "blacksmith-2vcpu-ubuntu-2404"
+        elif platform == "linux" and arch == "aarch64":
+            runner = "blacksmith-2vcpu-ubuntu-2404-arm"
+        else:
+            runner = find_runner(runners, platform, arch, True)
+
+        entries.append(
+            {
+                "platform": platform,
+                "arch": arch,
+                "runner": runner,
+                "crate_artifact_name": crate_artifact_name(platform, arch),
+            }
+        )
+    return entries
 
 
 def generate_python_build_matrix_entries(
